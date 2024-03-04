@@ -22,8 +22,9 @@ import (
 
 // VirtualMachineSpec defines the desired state of VirtualMachine
 type VirtualMachineSpec struct {
-	// Foo is an example field of VirtualMachine. Edit virtualmachine_types.go to remove/update
+	// IpAddress represent the ip address for the virtual machine
 	IpAddress string `json:"ipAddress,omitempty"`
+	// TODO: add more info here
 }
 
 // VirtualMachineStatus defines the observed state of VirtualMachine
@@ -31,12 +32,22 @@ type VirtualMachineStatus struct {
 	// conditions represents the latest available observations of current state.
 	// +listType=atomic
 	// +optional
-	Conditions []PlatformCondition `json:"conditions"`
-	Removing   bool                `json:"removing"`
+	Conditions []metav1.Condition `json:"conditions"`
+
+	// WorkflowName represent the latest argo workflow that was created by the operator
+	WorkflowName string `json:"workflowName,omitempty"`
+
+	// Removing marks if we are running a removing workflow for the object
+	Removing bool `json:"removing,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="workflow",type="string",JSONPath=".status.workflowName"
+// +kubebuilder:printcolumn:name="Creating",type="string",JSONPath=".status.conditions[?(@.type==\"Creating\")].status"
+// +kubebuilder:printcolumn:name="Created",type="string",JSONPath=".status.conditions[?(@.type==\"Created\")].status"
+// +kubebuilder:printcolumn:name="Failed",type="string",JSONPath=".status.conditions[?(@.type==\"Failed\")].status"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // VirtualMachine is the Schema for the virtualmachines API
 type VirtualMachine struct {
