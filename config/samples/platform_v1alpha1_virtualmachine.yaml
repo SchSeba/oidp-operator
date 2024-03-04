@@ -1,0 +1,12 @@
+apiVersion: platform.example.com/v1alpha1
+kind: VirtualMachine
+metadata:
+  labels:
+    app.kubernetes.io/name: virtualmachine
+    app.kubernetes.io/instance: virtualmachine-sample
+    app.kubernetes.io/part-of: oidp-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: oidp-operator
+  name: virtualmachine-sample
+spec:
+  ipAddress: "10.10.10.10"

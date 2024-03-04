@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: vm-{{.Name}}-{{.Generation}}
+  labels:
+    workflows.argoproj.io/archive-strategy: "false"
+spec:
+  entrypoint: whalesay
+  templates:
+    - name: whalesay
+      container:
+        image: quay.io/centos/centos:stream9
+        command:
+          - /bin/bash
+          - -c
+          {{ if .Status.Removing }}
+          - "echo removing"
+          {{ else }}
+          - "echo start && sleep 5 && echo {{.Spec.IpAddress}} echo down"
+          {{ end }}
