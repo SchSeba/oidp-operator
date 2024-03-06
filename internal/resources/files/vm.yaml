@@ -17,5 +17,5 @@ spec:
           {{ if .remove }}
           - "echo removing"
           {{ else }}
-          - "echo start && sleep 5 && echo {{ .ipAddr }} echo down"
+          - "echo start && sleep 60 && echo {{ .ipAddr }} echo down"
           {{ end }}

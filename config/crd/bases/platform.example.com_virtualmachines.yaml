@@ -50,9 +50,15 @@ spec:
           spec:
             description: VirtualMachineSpec defines the desired state of VirtualMachine
             properties:
-              ipAddress:
-                description: IpAddress represent the ip address for the virtual machine
-                type: string
+              parameters:
+                properties:
+                  ipAddress:
+                    description: IpAddress represent the ip address for the virtual
+                      machine
+                    type: string
+                type: object
+            required:
+            - parameters
             type: object
           status:
             description: VirtualMachineStatus defines the observed state of VirtualMachine
@@ -128,6 +134,13 @@ spec:
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
+              parameters:
+                properties:
+                  ipAddress:
+                    description: IpAddress represent the ip address for the virtual
+                      machine
+                    type: string
+                type: object
               removing:
                 description: Removing marks if we are running a removing workflow
                   for the object
@@ -136,6 +149,8 @@ spec:
                 description: WorkflowName represent the latest argo workflow that
                   was created by the operator
                 type: string
+            required:
+            - parameters
             type: object
         type: object
     served: true

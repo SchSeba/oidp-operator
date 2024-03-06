@@ -22,9 +22,7 @@ import (
 
 // VirtualMachineSpec defines the desired state of VirtualMachine
 type VirtualMachineSpec struct {
-	// IpAddress represent the ip address for the virtual machine
-	IpAddress string `json:"ipAddress,omitempty"`
-	// TODO: add more info here
+	Parameters `json:"parameters"`
 }
 
 // VirtualMachineStatus defines the observed state of VirtualMachine
@@ -37,8 +35,16 @@ type VirtualMachineStatus struct {
 	// WorkflowName represent the latest argo workflow that was created by the operator
 	WorkflowName string `json:"workflowName,omitempty"`
 
+	Parameters Parameters `json:"parameters"`
+
 	// Removing marks if we are running a removing workflow for the object
 	Removing bool `json:"removing,omitempty"`
+}
+
+type Parameters struct {
+	// IpAddress represent the ip address for the virtual machine
+	IpAddress string `json:"ipAddress,omitempty"`
+	// TODO: add more info here
 }
 
 // +kubebuilder:object:root=true

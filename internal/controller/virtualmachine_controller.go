@@ -22,6 +22,7 @@ import (
 	"github.com/SchSeba/oidp-operator/internal/consts"
 	"github.com/SchSeba/oidp-operator/internal/vars"
 	argo "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"time"
 
 	platformv1alpha1 "github.com/SchSeba/oidp-operator/api/v1alpha1"
 	"github.com/SchSeba/oidp-operator/internal/resources"
@@ -87,12 +89,56 @@ func (r *VirtualMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// Check if the workload exist
 		// if the workflow doesn't exist we create a new one
+		// or there was an update to the spec
 		if instance.Status.WorkflowName == "" {
 			// there is no workflow create a new creation workflow
 			err = r.CreateWorkflow(ctx, instance)
 			return ctrl.Result{}, err
 		}
+
+		// if there is a change we need to first check if the workflow is not still running
+		if !equality.Semantic.DeepDerivative(instance.Spec.Parameters, instance.Status.Parameters) {
+			workflow := &argo.Workflow{}
+			err = r.Get(ctx, client.ObjectKey{Name: instance.Status.WorkflowName, Namespace: vars.ArgoNamespace}, workflow)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					logger.Info("the argo workflow doesn't exist", "workflowName", instance.Status.WorkflowName, "instance", *instance)
+					return ctrl.Result{}, nil
+				}
+				logger.Error(err, "failed to get the argo workflow", "workflowName", instance.Status.WorkflowName, "instance", *instance)
+				return ctrl.Result{}, err
+			}
+
+			if workflow.Status.Phase == argo.WorkflowRunning || workflow.Status.Phase == argo.WorkflowPending {
+				logger.Info("a workflow for this instance is still running wait for it to finish")
+				return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+			}
+
+			err = r.CreateWorkflow(ctx, instance)
+			return ctrl.Result{}, err
+		}
+
 	} else {
+		// check if a workflow already run
+		if instance.Status.WorkflowName != "" {
+			// get the workflow and check if it's running
+			workflow := &argo.Workflow{}
+			err = r.Get(ctx, client.ObjectKey{Name: instance.Status.WorkflowName, Namespace: vars.ArgoNamespace}, workflow)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					logger.Info("the argo workflow doesn't exist", "workflowName", instance.Status.WorkflowName, "instance", *instance)
+					return ctrl.Result{}, nil
+				}
+				logger.Error(err, "failed to get the argo workflow", "workflowName", instance.Status.WorkflowName, "instance", *instance)
+				return ctrl.Result{}, err
+			}
+
+			if workflow.Status.Phase == argo.WorkflowRunning || workflow.Status.Phase == argo.WorkflowPending {
+				logger.Info("a workflow for this instance is still running wait for it to finish")
+				return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+			}
+		}
+
 		// we need to run the workflow to remove the object
 		err = r.DeleteWorkflow(ctx, instance)
 		if err != nil {
@@ -153,6 +199,7 @@ func (r *VirtualMachineReconciler) CreateWorkflow(ctx context.Context, instance 
 
 	// Save the workflow name to the instance status
 	instance.Status.WorkflowName = workflow.Name
+	instance.Status.Parameters = instance.Spec.Parameters
 	err = r.Status().Update(ctx, instance)
 	if err != nil {
 		logger.Error(err, "failed to update the vm instance with the workflow name")
@@ -259,7 +306,7 @@ func (r *VirtualMachineReconciler) DeleteWorkflow(ctx context.Context, instance 
 		// we find the object lets check the status
 		// if the workflow is done lets release the finalizer
 		if workflow.Status.Phase == argo.WorkflowSucceeded {
-			controllerutil.RemoveFinalizer(instance, "oidp-delete")
+			controllerutil.RemoveFinalizer(instance, consts.FinalizerName)
 			err = r.Update(ctx, instance)
 		}
 

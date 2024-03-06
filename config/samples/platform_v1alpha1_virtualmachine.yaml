@@ -9,4 +9,5 @@ metadata:
     app.kubernetes.io/created-by: oidp-operator
   name: virtualmachine-sample
 spec:
-  ipAddress: "10.10.10.10"
+  parameters:
+    ipAddress: "10.10.10.11"

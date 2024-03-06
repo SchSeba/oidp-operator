@@ -30,10 +30,20 @@ COPY hack/code-server-entrypoint.sh /usr/bin/entrypoint.sh
 ENV ENTRYPOINTD=${HOME}/entrypoint.d
 ENV GOPATH=/root/go
 
+RUN go install golang.org/x/tools/gopls@latest && \
+    go install honnef.co/go/tools/cmd/staticcheck@latest
 
 EXPOSE 8080
 # This way, if someone sets $DOCKER_USER, docker-exec will still work as
 # the uid will remain the same. note: only relevant if -u isn't passed to
 # docker-run.
 WORKDIR /root
+
+RUN code-server --install-extension redhat.vscode-yaml \
+                --install-extension ms-python.python \
+                --install-extension golang.go
+
+# Replaces "auth: password" with "auth: none" in the code-server config.
+RUN sed -i.bak 's/auth: password/auth: none/' ~/.config/code-server/config.yaml
+
 ENTRYPOINT ["/usr/bin/entrypoint.sh", "--bind-addr", "0.0.0.0:8080", "."]
