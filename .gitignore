@@ -5,9 +5,8 @@
 *.dll
 *.so
 *.dylib
-bin/*
 Dockerfile.cross
-
+bin/k8s
 # Test binary, build with `go test -c`
 *.test
 
